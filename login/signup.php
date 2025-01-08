@@ -27,12 +27,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
     if ($action === "signin" && isset($email_l, $password_l)) {
         $bb = new Client($db);
         $idClient = $bb->signIn($email_l, $password_l); 
-        
-        if ($idClient) {
-            $_SESSION['idClient'] = $idClient;
+        echo $idClient['idClient'];
+        if ($idClient['idClient']) {
+            $_SESSION['idClient'] = $idClient['idClient'];
     
             $query = $db->prepare("SELECT idAdmin FROM admin WHERE idClient = :idClient");
-            $query->bindParam(':idClient', $idClient, PDO::PARAM_INT);
+            $query->bindParam(':idClient', $idClient['idClient'], PDO::PARAM_INT);
             $query->execute();
             $isAdmin = $query->fetch(PDO::FETCH_ASSOC);
     

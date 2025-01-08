@@ -46,10 +46,8 @@ $avisList = $avisObj->getAllAvis();
                     <a href="index.php" class="text-lg font-bold text-custom">Drive & Loc</a>
                 </div>
                 <ul class="hidden md:flex space-x-6 text-gray-800">
-                    <li><a href="./home.html" class="text-black hover:text-custom">Home</a></li>
-                    <li><a href="details.php" class="text-black hover:text-custom">Details</a></li>
-                    <li><a href="cars.php" class="text-black hover:text-custom">Cars</a></li>
-                    <li><a href="reservation.php" class="text-black hover:text-custom">Reservation</a></li>
+                    <li><a href="../ajoutTheme.php" class="text-black hover:text-custom">Add Theme or Tag</a></li>
+                    
                 </ul>
             </div>
         </nav>

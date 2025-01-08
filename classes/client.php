@@ -34,8 +34,9 @@ class Client {
 
     if ($result && password_verify($password, $result['password'])) {
         return $result['idClient'];
+        
     }
-    return false;
+    return $result;
 }
 
     }
