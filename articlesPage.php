@@ -13,6 +13,8 @@
 
     require_once 'classes/Database.php';
     require_once "classe2/article.php";
+    require_once "classe2/theme.php";
+
   
     $db = new Database();
     $pdo = $db->getConnection();
@@ -48,6 +50,9 @@
         header("Location: success_page.php");
         exit;
     }
+
+    $themeObj = new Theme($pdo);
+    $themes = $themeObj->afficherTheme();
     
 ?>
 
@@ -174,39 +179,58 @@
     <div id="add-article-modal">
         <h3 class="text-2xl font-bold mb-6">Add New Article</h3>
     
-        <form id="add-article-form" action="" method="POST" method="POST" enctype="multipart/form-data">
-            <div class="mb-6">
-                <label for="article-image" class="block text-gray-700 font-semibold mb-2">Article Image</label>
-                <input id="article-image" name="article_image" type="file" accept="image/*" class="w-full p-4 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
-            </div>
-            <div class="mb-6">
-                <label for="article-title" class="block text-gray-700 font-semibold mb-2">Title</label>
-                <input id="article-title" name="article_title" type="text" class="w-full p-4 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Enter the article title" required>
-            </div>
-            <div class="mb-6">
-                <label for="article-content" class="block text-gray-700 font-semibold mb-2">Content</label>
-                <textarea id="article-content" name="article_content" rows="10" class="w-full p-4 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Write your article here..." required></textarea>
-            </div>
-            <div class="mb-6">
-    <label for="tag-select" class="block text-gray-700 font-semibold mb-2">Tags</label>
-    <div id="tag-container" class="flex flex-wrap border p-4 rounded-lg">
-        <select id="tag-select" class="flex-grow p-2 focus:outline-none">
-            <option value="" disabled selected>Select a tag</option>
-            <option value="Technology">Technology</option>
-            <option value="Travel">Travel</option>
-            <option value="Health">Health</option>
-            <option value="Education">Education</option>
-            <option value="Lifestyle">Lifestyle</option>
-        </select>
-    </div>
-    <small class="text-gray-500">Select a tag from the dropdown</small>
-    <input type="hidden" id="tags-hidden" name="tags" value="">
+        <form id="add-article-form" action="" method="POST" enctype="multipart/form-data">
+        <div class="mb-6">
+         <label for="article-category" class="block text-gray-700 font-semibold mb-2">Theme</label>
+          <select id="article-category" name="article_category" class="w-full p-4 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none" required>
+        <option value="" disabled selected>Select a Theme</option>
+        <?php
+        try {
+            $sql = "SELECT * FROM theme";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            while($theme = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                echo "<option value='" . htmlspecialchars($theme['idTheme']) . "'>" . htmlspecialchars($theme['theme']) . "</option>";
+            }
+        } catch(PDOException $e) {
+            echo "Error: " . $e->getMessage();
+        }
+        ?>
+    </select>
 </div>
-            <div class="flex justify-end space-x-4">
-                <button type="button" class="bg-gray-300 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-400 transition" id="cancel-button">Cancel</button>
-                <button type="submit" class=" bg-custom text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition">Add Article</button>
-            </div>
-        </form>
+    <div class="mb-6">
+        <label for="article-image" class="block text-gray-700 font-semibold mb-2">Article Image</label>
+        <input id="article-image" name="article_image" type="file" accept="image/*" class="w-full p-4 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
+    </div>
+    <div class="mb-6">
+        <label for="article-title" class="block text-gray-700 font-semibold mb-2">Title</label>
+        <input id="article-title" name="article_title" type="text" class="w-full p-4 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Enter the article title" required>
+    </div>
+    <div class="mb-6">
+        <label for="article-content" class="block text-gray-700 font-semibold mb-2">Content</label>
+        <textarea id="article-content" name="article_content" rows="10" class="w-full p-4 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Write your article here..." required></textarea>
+    </div>
+    <div class="mb-6">
+        <label for="tag-select" class="block text-gray-700 font-semibold mb-2">Tags</label>
+        <div id="tag-container" class="flex flex-wrap border p-4 rounded-lg">
+            <select id="tag-select" class="flex-grow p-2 focus:outline-none">
+                <option value="" disabled selected>Select a tag</option>
+                <option value="Technology">Technology</option>
+                <option value="Travel">Travel</option>
+                <option value="Health">Health</option>
+                <option value="Education">Education</option>
+                <option value="Lifestyle">Lifestyle</option>
+            </select>
+        </div>
+        <small class="text-gray-500">Select a tag from the dropdown</small>
+        <input type="hidden" id="tags-hidden" name="tags" value="">
+    </div>
+    <div class="flex justify-end space-x-4">
+        <button type="button" class="bg-gray-300 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-400 transition" id="cancel-button">Cancel</button>
+        <button type="submit" class="bg-custom text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition">Add Article</button>
+    </div>
+</form>
+
     </div>
 
     <footer class="bg-black text-white py-8">

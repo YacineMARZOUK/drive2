@@ -45,14 +45,13 @@ class Theme {
     }
     public function afficherTheme() {
         try {
-            $sql = "SELECT * FROM theme ";
+            $sql = "SELECT * FROM theme";
             $stmt = $this->db->prepare($sql);
-            if (!$stmt->execute()) {
-                
-                echo "Erreur lors de l'ajout du thème.";
-            }
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             echo "Erreur : " . $e->getMessage();
+            return false;
         }
     }
 
