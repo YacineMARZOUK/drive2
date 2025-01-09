@@ -43,6 +43,19 @@ class Theme {
             echo "Erreur : " . $e->getMessage();
         }
     }
+    public function afficherTheme() {
+        try {
+            $sql = "SELECT * FROM theme ";
+            $stmt = $this->db->prepare($sql);
+            if (!$stmt->execute()) {
+                
+                echo "Erreur lors de l'ajout du thème.";
+            }
+        } catch (PDOException $e) {
+            echo "Erreur : " . $e->getMessage();
+        }
+    }
+
 }
 ?>
 

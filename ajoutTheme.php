@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <a href="#" class="text-lg font-bold text-custom">Drive & Loc</a>
             </div>
             <ul class="hidden md:flex space-x-6 text-gray-800">
-                <li><a href="admin/allReservation.php" class="text-black hover:text-custom">Add a vehicule </a></li>
+                <li><a href="admin/allReservation.php" class="text-black hover:text-custom bg-custom text-white px-4 py-2 rounded hover:bg-red-600">Add a vehicule </a></li>
                 
             </ul>
         </div>

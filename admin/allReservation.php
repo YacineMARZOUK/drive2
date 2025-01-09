@@ -46,7 +46,7 @@ $avisList = $avisObj->getAllAvis();
                     <a href="index.php" class="text-lg font-bold text-custom">Drive & Loc</a>
                 </div>
                 <ul class="hidden md:flex space-x-6 text-gray-800">
-                    <li><a href="../ajoutTheme.php" class="text-black hover:text-custom">Add Theme or Tag</a></li>
+                    <li><a href="../ajoutTheme.php" class="text-black hover:text-custom bg-custom text-white px-4 py-2 rounded hover:bg-red-600">Add Theme or Tag</a></li>
                     
                 </ul>
             </div>

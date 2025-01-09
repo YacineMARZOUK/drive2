@@ -27,17 +27,20 @@ class Client {
     
 
     public function signIn($email, $password) {
-    $query = $this->db->prepare("SELECT idClient, password FROM client WHERE email = :email");
-    $query->bindParam(':email', $email, PDO::PARAM_STR);
-    $query->execute();
-    $result = $query->fetch(PDO::FETCH_ASSOC);
-
-    if ($result && password_verify($password, $result['password'])) {
-        return $result['idClient'];
-        
+        $query = $this->db->prepare("SELECT idClient, password FROM client WHERE email = :email");
+        $query->bindParam(':email', $email, PDO::PARAM_STR);
+        $query->execute();
+        $result = $query->fetch(PDO::FETCH_ASSOC);
+    
+        // Si un utilisateur est trouvé et le mot de passe correspond
+        if ($result && password_verify($password, $result['password'])) {
+            return $result['idClient']; // Retourne uniquement l'idClient
+        }
+    
+        // Retourne false si la connexion échoue
+        return false;
     }
-    return $result;
-}
+    
 
     }
     
@@ -70,11 +73,7 @@ class Client {
                 <a href="../index.php" class="text-lg font-bold text-custom">Drive & Loc</a>
             </div>
             <ul class="hidden md:flex space-x-6 text-gray-800">
-                <li><a href="./home.html" class="text-black hover:text-custom">Home</a></li>
-                <li><a href="details.php" class="text-black hover:text-custom">Details</a></li>
-                <li><a href="cars.php" class="text-black hover:text-custom">Cars</a></li>
-                <li><a href="./Contrats/contrats.php" class="text-black hover:text-custom">Contrats</a></li>
-            </ul>
+                <li><a href="../articlesPage.php" class="bg-custom text-white py-2 px-4 rounded-lg hover\:bg-custom:hover transition">Drive & Loc Blog</a></li>
         </div>
     </nav>
 

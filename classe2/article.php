@@ -1,5 +1,4 @@
 <?php
-require_once("../classes/Database.php");
 
 class Article {
     protected $idArticle; 
@@ -8,14 +7,15 @@ class Article {
     protected $datePubl; 
     protected $idClient; 
     protected $idTheme;
+    protected $imgsrc;
 
-    public function __construct($idArticle, $titre, $contenu, $datePubl, $idClient, $idTheme) {
-        $this->idArticle = $idArticle;
+    public function __construct($titre, $contenu, $datePubl, $idClient, $idTheme, $imgsrc) {
         $this->titre = $titre;
         $this->contenu = $contenu;
         $this->datePubl = $datePubl;
         $this->idClient = $idClient;
         $this->idTheme = $idTheme;
+        $this->imgsrc = $imgsrc;
     }
 
     /**
@@ -23,14 +23,14 @@ class Article {
      */
     public function ajouterArticle($pdo) {
         try {
-            $stmt = $pdo->prepare("INSERT INTO article (idArticle, titre, contenu, datePublication, idClient, idTheme) 
-                                   VALUES (:idArticle, :titre, :contenu, :datePublication, :idClient, :idTheme)");
-            $stmt->bindParam(':idArticle', $this->idArticle, PDO::PARAM_INT);
+            $stmt = $pdo->prepare("INSERT INTO article ( titre, contenu, datePublication, idClient, idTheme, imgsrc) 
+                                   VALUES (:titre, :contenu, :datePublication, :idClient, :idTheme, :imgsrc)");
             $stmt->bindParam(':titre', $this->titre, PDO::PARAM_STR);
             $stmt->bindParam(':contenu', $this->contenu, PDO::PARAM_STR);
             $stmt->bindParam(':datePublication', $this->datePubl, PDO::PARAM_STR);
             $stmt->bindParam(':idClient', $this->idClient, PDO::PARAM_INT);
             $stmt->bindParam(':idTheme', $this->idTheme, PDO::PARAM_INT);
+            $stmt->bindParam(':imgsrc', $this->imgsrc, PDO::PARAM_STR);
 
             if ($stmt->execute()) {
                 echo "Article ajouté avec succès.";
@@ -42,9 +42,6 @@ class Article {
         }
     }
 
-    /**
-     * Rechercher des articles dans la base de données par titre.
-     */
     public static function rechercher($pdo, $motCle) {
         try {
             $stmt = $pdo->prepare("SELECT * FROM article WHERE titre LIKE :motCle");
