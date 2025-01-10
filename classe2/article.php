@@ -72,6 +72,12 @@ class Article {
             return [];
         }
     }
+
+    public static function GetArticleDetails($pdo, $article_id) {
+        $stmt = $pdo->prepare('SELECT * FROM article WHERE idArticle = :idArticle');
+        $stmt->execute(['idArticle' => $article_id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC); // Changed from fetchAll to fetch
+    }
 }
 
 ?>

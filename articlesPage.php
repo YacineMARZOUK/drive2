@@ -1,61 +1,71 @@
 <?php 
-    session_start();
+session_start();
 
-    if (!isset($_SESSION['idClient'])) {
-        header("Location: login.php");
-        exit();
-    }
-    
-    $idClient = $_SESSION['idClient'];
-    
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Update this line to get the actual theme ID from the form
-        $idTheme = $_POST['article_category']; // Instead of hardcoded 11
-        
-        // Rest of your POST handling code...
-    }
+if (!isset($_SESSION['idClient'])) {
+    header("Location: login.php");
+    exit();
+}
 
-    require_once 'classes/Database.php';
-    require_once "classe2/article.php";
-    require_once "classe2/theme.php";
+$idClient = $_SESSION['idClient'];
 
-  
-    $db = new Database();
-    $pdo = $db->getConnection();
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Vérification et traitement de l'image
+require_once 'classes/Database.php';
+require_once "classe2/article.php";
+require_once "classe2/theme.php";
+require_once "classe2/Tag.php";
+$db = new Database();
+$pdo = $db->getConnection();
+$tagObj = new Tag($pdo);
+$tags = $tagObj->getAllTags();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        // Verify theme exists before proceeding
+        $idTheme = $_POST['article_category'];
+        $themeCheck = $pdo->prepare("SELECT idTheme FROM theme WHERE idTheme = ?");
+        $themeCheck->execute([$idTheme]);
+        if (!$themeCheck->fetch()) {
+            throw new Exception("Invalid theme selected");
+        }
+
+        // Image handling
         $imgsrc = null;
         if (isset($_FILES['article_image']) && $_FILES['article_image']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = 'uploads/'; // Répertoire où les images seront enregistrées
+            $uploadDir = 'uploads/';
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0777, true);
             }
             $imgsrc = $uploadDir . basename($_FILES['article_image']['name']);
             if (!move_uploaded_file($_FILES['article_image']['tmp_name'], $imgsrc)) {
-                echo "Erreur lors de l'upload de l'image.";
-                exit;
+                throw new Exception("Error uploading image");
             }
         }
-    
-        // Données du formulaire
+
+        // Article data
         $title = $_POST['article_title'];
         $content = $_POST['article_content'];
         $datePublished = date("Y-m-d H:i:s");
-        $idClientt = $idClient; // Utilisateur connecté
-        $idTheme = 11; // Thème sélectionné
-    
-        // Création d'une instance d'Article
+        $idClientt = $idClient;
+
+        // Create and add article
         $article = new Article($title, $content, $datePublished, $idClientt, $idTheme, $imgsrc);
-    
-        // Ajout dans la base de données
         $article->ajouterArticle($pdo);
+
+        // Redirect or send success response
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
+
+    } catch (Exception $e) {
+        // Log error and send response
+        error_log("Error adding article: " . $e->getMessage());
+        http_response_code(400);
+        echo "Error: " . $e->getMessage();
         exit;
     }
+}
 
-    $themeObj = new Theme($pdo);
-    $themes = $themeObj->afficherTheme();
-    $allArticles = Article::getAllArticles($pdo);
-    
+$themeObj = new Theme($pdo);
+$themes = $themeObj->afficherTheme();
+$allArticles = Article::getAllArticles($pdo);
 ?>
 
 <!DOCTYPE html>
@@ -213,19 +223,20 @@
         <textarea id="article-content" name="article_content" rows="10" class="w-full p-4 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="Write your article here..." required></textarea>
     </div>
     <div class="mb-6">
-        <label for="tag-select" class="block text-gray-700 font-semibold mb-2">Tags</label>
-        <div id="tag-container" class="flex flex-wrap border p-4 rounded-lg">
-            <select id="tag-select" class="flex-grow p-2 focus:outline-none">
-                <option value="" disabled selected>Select a tag</option>
-                <option value="Technology">Technology</option>
-                <option value="Travel">Travel</option>
-                <option value="Health">Health</option>
-                <option value="Education">Education</option>
-                <option value="Lifestyle">Lifestyle</option>
-            </select>
-        </div>
-        <small class="text-gray-500">Select a tag from the dropdown</small>
-        <input type="hidden" id="tags-hidden" name="tags" value="">
+    <label for="tag-select" class="block text-gray-700 font-semibold mb-2">Tags</label>
+    <div id="tag-container" class="flex flex-wrap border p-4 rounded-lg">
+        <select id="tag-select" class="flex-grow p-2 focus:outline-none">
+            <option value="" disabled selected>Select a tag</option>
+            <?php
+            foreach($tags as $tag) {
+                echo "<option value='" . htmlspecialchars($tag['nom']) . "'>" . 
+                     htmlspecialchars($tag['nom']) . "</option>";
+            }
+            ?>
+        </select>
+    </div>
+    <small class="text-gray-500">Select a tag from the dropdown</small>
+    <input type="hidden" id="tags-hidden" name="tags" value="">
     </div>
     <div class="flex justify-end space-x-4">
         <button type="button" class="bg-gray-300 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-400 transition" id="cancel-button">Cancel</button>
@@ -311,29 +322,38 @@
         }
     }
 
-    function addTag(tag) {
-        if (!tags.has(tag) && tag !== '') {
-            tags.add(tag);
-            const tagElement = document.createElement('div');
-            tagElement.className = 'tag';
-            tagElement.innerHTML = `
-                <span>${tag}</span>
-                <i class="fas fa-times text-gray-500" onclick="removeTag(this, '${tag}')"></i>
-            `;
-            tagContainer.insertBefore(tagElement, tagInput);
-            updateHiddenInput();
-        }
+    document.getElementById('tag-select').addEventListener('change', function(e) {
+    const selectedTag = e.target.value;
+    if (selectedTag) {
+        addTag(selectedTag);
+        e.target.value = ''; // Reset select to default option
     }
+    });
 
-    function removeTag(element, tag) {
-        tags.delete(tag);
-        element.parentElement.remove();
+    function addTag(tag) {
+    if (!tags.has(tag) && tag !== '') {
+        tags.add(tag);
+        const tagElement = document.createElement('div');
+        tagElement.className = 'tag bg-gray-200 rounded-full px-3 py-1 m-1 text-sm flex items-center';
+        tagElement.innerHTML = `
+            <span class="mr-2">${tag}</span>
+            <i class="fas fa-times cursor-pointer" onclick="removeTag(this, '${tag}')"></i>
+        `;
+        tagContainer.insertBefore(tagElement, document.getElementById('tag-select'));
         updateHiddenInput();
     }
+}
 
-    function updateHiddenInput() {
-        tagsHidden.value = Array.from(tags).join(',');
-    }
+    
+function removeTag(element, tag) {
+    tags.delete(tag);
+    element.parentElement.remove();
+    updateHiddenInput();
+}
+
+function updateHiddenInput() {
+    tagsHidden.value = Array.from(tags).join(',');
+}
 
     // Replace the second articles declaration with:
 let articles = <?php 
@@ -366,6 +386,7 @@ function displayArticles(page) {
                 <p class="text-gray-700 mb-4">${article.contenu.substring(0, 150)}...</p>
                 <div class="flex justify-between items-center">
                     <button class="bg-custom text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition">Read More</button>
+                    <a href="article_details.php?id=${article.idArticle}" target="_blank" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition">Read More</a>
                     <span class="text-sm text-gray-500">${new Date(article.datePublication).toLocaleTimeString()}</span>
                 </div>
             </div>
