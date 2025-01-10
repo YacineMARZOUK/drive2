@@ -2,14 +2,18 @@
     session_start();
 
     if (!isset($_SESSION['idClient'])) {
-
         header("Location: login.php");
         exit();
     }
     
     $idClient = $_SESSION['idClient'];
     
-    
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Update this line to get the actual theme ID from the form
+        $idTheme = $_POST['article_category']; // Instead of hardcoded 11
+        
+        // Rest of your POST handling code...
+    }
 
     require_once 'classes/Database.php';
     require_once "classe2/article.php";
@@ -45,14 +49,12 @@
     
         // Ajout dans la base de données
         $article->ajouterArticle($pdo);
-    
-        // Redirection après succès
-        header("Location: success_page.php");
         exit;
     }
 
     $themeObj = new Theme($pdo);
     $themes = $themeObj->afficherTheme();
+    $allArticles = Article::getAllArticles($pdo);
     
 ?>
 
@@ -262,15 +264,7 @@
     const tagsHidden = document.getElementById('tags-hidden');
     let tags = new Set();
 
-    // Sample articles data (replace with your actual data)
-    const articles = Array.from({ length: 50 }, (_, i) => ({
-        id: i + 1,
-        title: `Article ${i + 1}`,
-        author: 'John Doe',
-        date: 'Jan 7, 2025',
-        content: 'Sample content...',
-        image: 'https://via.placeholder.com/400x250'
-    }));
+    
 
     // Pagination settings
     const itemsPerPage = 9;
@@ -341,27 +335,45 @@
         tagsHidden.value = Array.from(tags).join(',');
     }
 
-    // Article display and pagination functions
-    function displayArticles(page) {
-        const start = (page - 1) * itemsPerPage;
-        const end = start + itemsPerPage;
-        const paginatedArticles = articles.slice(start, end);
-        
-        const container = document.getElementById('articles-container');
-        container.innerHTML = paginatedArticles.map(article => `
-            <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition overflow-hidden">
-                <img src="${article.image}" alt="Article Image" class="w-full h-48 object-cover">
-                <div class="p-6">
-                    <h3 class="text-lg font-bold text-gray-800 mb-2">${article.title}</h3>
-                    <p class="text-sm text-gray-600 mb-4">By ${article.author} | ${article.date}</p>
-                    <p class="text-gray-700 mb-4">${article.content}</p>
+    // Replace the second articles declaration with:
+let articles = <?php 
+    try {
+        $allArticles = Article::getAllArticles($pdo);
+        echo json_encode($allArticles);
+    } catch (Exception $e) {
+        echo "[]";
+        error_log("Error: " . $e->getMessage());
+    }
+?>;
+
+
+// Article display and pagination functions
+function displayArticles(page) {
+    const start = (page - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const paginatedArticles = articles.slice(start, end);
+    
+    const container = document.getElementById('articles-container');
+    container.innerHTML = paginatedArticles.map(article => `
+        <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition overflow-hidden">
+            <img src="${article.imgsrc || 'https://via.placeholder.com/400x250'}" alt="Article Image" class="w-full h-48 object-cover">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">${article.titre}</h3>
+                    <span class="bg-gray-200 text-sm px-2 py-1 rounded">${article.theme_name}</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-4">By ${article.author} | ${new Date(article.datePublication).toLocaleDateString()}</p>
+                <p class="text-gray-700 mb-4">${article.contenu.substring(0, 150)}...</p>
+                <div class="flex justify-between items-center">
                     <button class="bg-custom text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition">Read More</button>
+                    <span class="text-sm text-gray-500">${new Date(article.datePublication).toLocaleTimeString()}</span>
                 </div>
             </div>
-        `).join('');
-        
-        updatePagination();
-    }
+        </div>
+    `).join('');
+    
+    updatePagination();
+}
 
     function updatePagination() {
         const totalPages = Math.ceil(articles.length / itemsPerPage);
@@ -425,18 +437,60 @@
         }
     }
 
-    // Filter articles function
     function filterArticles(category) {
-        // Add your filtering logic here
-        console.log('Filtering by:', category);
+    if (category === 'All') {
+        displayArticles(1);
+        return;
     }
+    
+    const filteredArticles = articles.filter(article => article.theme_name === category);
+    currentPage = 1;
+    const container = document.getElementById('articles-container');
+    container.innerHTML = filteredArticles.map(article => `
+        <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition overflow-hidden">
+            <img src="${article.imgsrc || 'https://via.placeholder.com/400x250'}" alt="Article Image" class="w-full h-48 object-cover">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">${article.titre}</h3>
+                    <span class="bg-gray-200 text-sm px-2 py-1 rounded">${article.theme_name}</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-4">By ${article.author} | ${new Date(article.datePublication).toLocaleDateString()}</p>
+                <p class="text-gray-700 mb-4">${article.contenu.substring(0, 150)}...</p>
+                <div class="flex justify-between items-center">
+                    <button class="bg-custom text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition">Read More</button>
+                    <span class="text-sm text-gray-500">${new Date(article.datePublication).toLocaleTimeString()}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
 
-    // Search articles function
-    function searchArticles() {
-        const searchTerm = document.getElementById('search-input').value.toLowerCase();
-        // Add your search logic here
-        console.log('Searching for:', searchTerm);
-    }
+function searchArticles() {
+    const searchTerm = document.getElementById('search-input').value.toLowerCase();
+    const filteredArticles = articles.filter(article => 
+        article.titre.toLowerCase().includes(searchTerm) || 
+        article.contenu.toLowerCase().includes(searchTerm)
+    );
+    
+    const container = document.getElementById('articles-container');
+    container.innerHTML = filteredArticles.map(article => `
+        <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition overflow-hidden">
+            <img src="${article.imgsrc || 'https://via.placeholder.com/400x250'}" alt="Article Image" class="w-full h-48 object-cover">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">${article.titre}</h3>
+                    <span class="bg-gray-200 text-sm px-2 py-1 rounded">${article.theme_name}</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-4">By ${article.author} | ${new Date(article.datePublication).toLocaleDateString()}</p>
+                <p class="text-gray-700 mb-4">${article.contenu.substring(0, 150)}...</p>
+                <div class="flex justify-between items-center">
+                    <button class="bg-custom text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition">Read More</button>
+                    <span class="text-sm text-gray-500">${new Date(article.datePublication).toLocaleTimeString()}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
 
     // Event listeners
     document.addEventListener('DOMContentLoaded', function() {
@@ -452,11 +506,23 @@
         overlay.addEventListener('click', closeModal);
         
         document.getElementById('add-article-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            // Handle form submission here
-            console.log('Tags:', tagsHidden.value);
-            closeModal();
-        });
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('articlesPage.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        closeModal();
+        // Reload the page to show the new article
+        window.location.reload();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+});
     });
 </script>
 </body>

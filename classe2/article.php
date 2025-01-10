@@ -32,9 +32,8 @@ class Article {
             $stmt->bindParam(':idTheme', $this->idTheme, PDO::PARAM_INT);
             $stmt->bindParam(':imgsrc', $this->imgsrc, PDO::PARAM_STR);
 
-            if ($stmt->execute()) {
-                echo "Article ajouté avec succès.";
-            } else {
+            if (!$stmt->execute()) {
+               
                 echo "Erreur lors de l'ajout de l'article.";
             }
         } catch (PDOException $e) {
@@ -59,5 +58,20 @@ class Article {
             echo "Erreur : " . $e->getMessage();
         }
     }
+    public static function getAllArticles($pdo) {
+        try {
+            $stmt = $pdo->prepare("SELECT article.*, client.nom as author, theme.theme as theme_name 
+                                  FROM article 
+                                  LEFT JOIN client ON article.idClient = client.idClient
+                                  LEFT JOIN theme ON article.idTheme = theme.idTheme
+                                  ORDER BY datePublication DESC");
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            echo "Error: " . $e->getMessage();
+            return [];
+        }
+    }
 }
+
 ?>
