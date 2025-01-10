@@ -6,6 +6,7 @@ require_once 'classes/Database.php';
 require_once "classe2/article.php";
 require_once "classe2/theme.php";
 require_once "classe2/Tag.php";
+require_once "classe2/comment.php";
 
 $db = new Database();
 $pdo = $db->getConnection();
@@ -29,6 +30,9 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
 }
 
 // Handle comments
+$commentaire = new Commentaire($pdo);
+
+// Handle comments
 if ($_SERVER['REQUEST_METHOD'] === "POST") {
     if (!$idClient) {
         header("Location: login/login.php");
@@ -39,8 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
         $content = htmlspecialchars(trim($_POST['content']));
         if (!empty($content)) {
             try {
-                $stmt = $pdo->prepare("INSERT INTO comments (content, id_client, id_article, date_create) VALUES (?, ?, ?, NOW())");
-                $stmt->execute([$content, $idClient, $article_id]);
+                $result = $commentaire->ajouterComment($content, $article_id, $idClient);
                 header("Location: " . $_SERVER['PHP_SELF'] . "?id=" . $article_id);
                 exit();
             } catch (Exception $e) {
@@ -54,8 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
         $commentId = htmlspecialchars(trim($_POST['editComment']));
         if (!empty($content) && !empty($commentId)) {
             try {
-                $stmt = $pdo->prepare("UPDATE comments SET content = ? WHERE id_comment = ? AND id_client = ?");
-                $stmt->execute([$content, $commentId, $idClient]);
+                $result = $commentaire->modifierComment($commentId, $content);
                 header("Location: " . $_SERVER['PHP_SELF'] . "?id=" . $article_id);
                 exit();
             } catch (Exception $e) {
@@ -68,8 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
         $commentId = htmlspecialchars(trim($_POST['delete']));
         if (!empty($commentId)) {
             try {
-                $stmt = $pdo->prepare("DELETE FROM comments WHERE id_comment = ? AND id_client = ?");
-                $stmt->execute([$commentId, $idClient]);
+                $result = $commentaire->supprimerComment($commentId);
                 header("Location: " . $_SERVER['PHP_SELF'] . "?id=" . $article_id);
                 exit();
             } catch (Exception $e) {
@@ -79,14 +80,14 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
     }
 }
 
-// Fetch comments
+// Fetch comments - Add this method to your Commentaire class
 try {
     $stmt = $pdo->prepare("
         SELECT c.*, cl.nom 
-        FROM comments c 
-        JOIN client cl ON c.id_client = cl.idClient 
-        WHERE c.id_article = ? 
-        ORDER BY c.date_create DESC
+        FROM commentaire c 
+        JOIN client cl ON c.idClient = cl.idClient 
+        WHERE c.idArticle = ? 
+        ORDER BY c.dateCommentaire DESC
     ");
     $stmt->execute([$article_id]);
     $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -130,6 +131,9 @@ try {
             background: rgba(0, 0, 0, 0.5);
             z-index: 40;
         }
+        .text-custom { color: #ff0000; }
+        .bg-custom { background-color: #ff0000; }
+        .hover\:bg-custom:hover { background-color: #cc0000; }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -138,7 +142,7 @@ try {
         <div class="container mx-auto flex justify-between items-center py-4 px-6">
             <h1 class="text-3xl font-bold text-custom">Drive & Loc Blog</h1>
             <nav class="hidden md:flex space-x-6">
-                <a href="../../index.php" class="text-gray-700 hover:text-custom transition">Home</a>
+            <a href="articlesPage.php" class="bg-custom text-white py-2 px-4 rounded-lg hover\:bg-custom:hover transition">Articles</a>
                 <a href="../blog.php" class="text-gray-700 hover:text-custom transition">Articles</a>
                 <a href="../../index.php#features" class="text-gray-700 hover:text-custom transition">Features</a>
                 <a href="../../index.php#contact" class="text-gray-700 hover:text-custom transition">Contact</a>
@@ -195,49 +199,49 @@ try {
                         <form method="POST">
                             <textarea name="content" class="w-full p-4 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none mb-4" 
                                       placeholder="Write your comment here..." rows="4" required></textarea>
-                            <button name="addComment" class="bg-custom text-white py-2 px-6 rounded-lg hover:bg-custom transition">
-                                Submit
-                            </button>
+                                      <button name="addComment" class="bg-custom text-white py-2 px-4 rounded-lg hover:bg-custom transition">
+                                        Submit
+                                      </button>
                         </form>
                     </div>
                     <?php endif; ?>
 
                     <!-- Existing Comments -->
                     <div class="space-y-6" id="comments-section">
-                        <?php if (!empty($comments)): ?>
-                            <?php foreach($comments as $comment): ?>
-                                <div class="border-b pb-4 flex justify-between items-start">
-                                    <div>
-                                        <p class="text-gray-800">
-                                            <span class="font-bold"><?php echo htmlspecialchars($comment['nom']); ?></span> - 
-                                            <?php echo htmlspecialchars($comment['content']); ?>
-                                        </p>
-                                        <p class="text-sm text-gray-600">
-                                            Posted on <?php echo date('F j, Y', strtotime($comment['date_create'])); ?>
-                                        </p>
-                                    </div>
-                                    <?php if($idClient && $comment['id_client'] == $idClient): ?>
-                                        <div class="flex space-x-4">
-                                            <button type="button" class="text-blue-600 hover:underline" 
-                                                    onclick="openModal('<?php echo htmlspecialchars($comment['nom']); ?>', 
-                                                                      '<?php echo htmlspecialchars($comment['content']); ?>', 
-                                                                      <?php echo $comment['id_comment']; ?>)">
-                                                Modify
-                                            </button>
-                                            <form method="POST" class="inline">
-                                                <button type="submit" name="delete" value="<?php echo $comment['id_comment']; ?>" 
-                                                        class="text-red-600 hover:underline">
-                                                    Remove
-                                                </button>
-                                            </form>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <p class="text-gray-600">No comments yet. Be the first to comment!</p>
-                        <?php endif; ?>
+    <?php if (!empty($comments)): ?>
+        <?php foreach($comments as $comment): ?>
+            <div class="border-b pb-4 flex justify-between items-start">
+                <div>
+                    <p class="text-gray-800">
+                        <span class="font-bold"><?php echo htmlspecialchars($comment['nom']); ?></span> - 
+                        <?php echo htmlspecialchars($comment['contenu']); ?>
+                    </p>
+                    <p class="text-sm text-gray-600">
+                        Posted on <?php echo date('F j, Y', strtotime($comment['dateCommentaire'])); ?>
+                    </p>
+                </div>
+                <?php if($idClient && $comment['idClient'] == $idClient): ?>
+                    <div class="flex space-x-4">
+                        <button type="button" class="text-blue-600 hover:underline" 
+                                onclick="openModal('<?php echo htmlspecialchars($comment['nom']); ?>', 
+                                                  '<?php echo htmlspecialchars($comment['contenu']); ?>', 
+                                                  <?php echo $comment['idCommentaire']; ?>)">
+                            Modify
+                        </button>
+                        <form method="POST" class="inline">
+                            <button type="submit" name="delete" value="<?php echo $comment['idCommentaire']; ?>" 
+                                    class="text-red-600 hover:underline">
+                                Remove
+                            </button>
+                        </form>
                     </div>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <p class="text-gray-600">No comments yet. Be the first to comment!</p>
+    <?php endif; ?>
+</div>
                 </div>
             </div>
         </div>
